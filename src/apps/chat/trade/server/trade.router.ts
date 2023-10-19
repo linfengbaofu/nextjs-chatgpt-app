@@ -1,42 +1,28 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
-import { createTRPCRouter, publicProcedure } from '~/modules/trpc/trpc.server';
-import { fetchTextOrTRPCError } from '~/modules/trpc/trpc.serverutils';
+import { createTRPCRouter, publicProcedure } from '~/server/api/trpc.server';
+import { fetchTextOrTRPCError } from '~/server/api/trpc.serverutils';
 
 import { chatGptImportConversation, chatGptSharedChatSchema } from './import.chatgpt';
-import { postToPasteGGOrThrow } from './publish.pastegg';
+import { postToPasteGGOrThrow, publishToInputSchema, publishToOutputSchema } from './publish.pastegg';
+import { storageDeleteOutputSchema, storageGetProcedure, storageMarkAsDeletedProcedure, storagePutOutputSchema, storagePutProcedure } from './storage.server';
 
 
-const chatGptImportInputSchema = z.object({
-  url: z.string().url().startsWith('https://chat.openai.com/share/'),
-});
+export type StoragePutSchema = z.infer<typeof storagePutOutputSchema>;
 
-const publishToInputSchema = z.object({
-  to: z.enum(['paste.gg']),
-  title: z.string(),
-  fileContent: z.string(),
-  fileName: z.string(),
-  origin: z.string(),
-});
-
-const publishToOutputSchema = z.object({
-  url: z.string(),
-  expires: z.string(),
-  deletionKey: z.string(),
-  created: z.string(),
-});
+export type StorageDeleteSchema = z.infer<typeof storageDeleteOutputSchema>;
 
 export type PublishedSchema = z.infer<typeof publishToOutputSchema>;
 
 
-export const sharingRouter = createTRPCRouter({
+export const tradeRouter = createTRPCRouter({
 
   /**
    * ChatGPT Shared Chats Importer
    */
   importChatGptShare: publicProcedure
-    .input(chatGptImportInputSchema)
+    .input(z.object({ url: z.string().url().startsWith('https://chat.openai.com/share/') }))
     .output(z.object({ data: chatGptSharedChatSchema, conversationId: z.string() }))
     .query(async ({ input: { url } }) => {
       const htmlPage = await fetchTextOrTRPCError(url, 'GET', {}, undefined, 'ChatGPT Importer');
@@ -48,7 +34,22 @@ export const sharingRouter = createTRPCRouter({
     }),
 
   /**
-   * Publish a file (with title, content, name) to a sharing service
+   * Write an object to storage, and return the ID, owner, and deletion key
+   */
+  storagePut: storagePutProcedure,
+
+  /**
+   * Read a stored object by ID (optional owner)
+   */
+  storageGet: storageGetProcedure,
+
+  /**
+   * Delete a stored object by ID and deletion key
+   */
+  storageDelete: storageMarkAsDeletedProcedure,
+
+  /**
+   * Publish a text file (with title, content, name) to a sharing service
    * For now only 'paste.gg' is supported
    */
   publishTo: publicProcedure
