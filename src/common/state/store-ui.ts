@@ -1,45 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import { DLLMId } from '~/modules/llms/store-llms';
-
-
-// UI State - not persisted
-
-interface UIStateStore {
-
-  settingsOpenTab: number; // 0: closed, 1..N: tab index
-  openSettings: (tab?: number) => void;
-  closeSettings: () => void;
-
-  modelsSetupOpen: boolean;
-  openModelsSetup: () => void;
-  closeModelsSetup: () => void;
-
-  llmOptionsId: DLLMId | null;
-  openLLMOptions: (llmId: DLLMId) => void;
-  closeLLMOptions: () => void;
-
-}
-
-export const useUIStateStore = create<UIStateStore>()(
-  (set) => ({
-
-    settingsOpenTab: 0,
-    openSettings: (tab?: number) => set({ settingsOpenTab: tab || 1 }),
-    closeSettings: () => set({ settingsOpenTab: 0 }),
-
-    modelsSetupOpen: false,
-    openModelsSetup: () => set({ modelsSetupOpen: true }),
-    closeModelsSetup: () => set({ modelsSetupOpen: false }),
-
-    llmOptionsId: null,
-    openLLMOptions: (llmId: DLLMId) => set({ llmOptionsId: llmId }),
-    closeLLMOptions: () => set({ llmOptionsId: null }),
-
-  }),
-);
-
 
 // UI Counters
 
@@ -71,7 +32,7 @@ const useUICountersStore = create<UICountersStore>()(
     }),
 );
 
-type UiCounterKey = 'export-share' | 'share-chat-link';
+type UiCounterKey = 'export-share' | 'share-chat-link' | 'call-wizard';
 
 export function useUICounter(key: UiCounterKey) {
   const value = useUICountersStore(state => state.actionCounters[key] || 0);
@@ -92,8 +53,8 @@ interface UIPreferencesStore {
   doubleClickToEdit: boolean;
   setDoubleClickToEdit: (doubleClickToEdit: boolean) => void;
 
-  enterToSend: boolean;
-  setEnterToSend: (enterToSend: boolean) => void;
+  enterIsNewline: boolean;
+  setEnterIsNewline: (enterIsNewline: boolean) => void;
 
   experimentalLabs: boolean;
   setExperimentalLabs: (experimentalLabs: boolean) => void;
@@ -125,8 +86,8 @@ export const useUIPreferencesStore = create<UIPreferencesStore>()(
       doubleClickToEdit: true,
       setDoubleClickToEdit: (doubleClickToEdit: boolean) => set({ doubleClickToEdit }),
 
-      enterToSend: true,
-      setEnterToSend: (enterToSend: boolean) => set({ enterToSend }),
+      enterIsNewline: false,
+      setEnterIsNewline: (enterIsNewline: boolean) => set({ enterIsNewline }),
 
       experimentalLabs: false,
       setExperimentalLabs: (experimentalLabs: boolean) => set({ experimentalLabs }),
@@ -146,6 +107,18 @@ export const useUIPreferencesStore = create<UIPreferencesStore>()(
     }),
     {
       name: 'app-ui',
+
+      /* versioning:
+       * 1: rename 'enterToSend' to 'enterIsNewline' (flip the meaning)
+       */
+      version: 1,
+
+      migrate: (state: any, fromVersion: number): UIPreferencesStore => {
+        // 0 -> 1: rename 'enterToSend' to 'enterIsNewline' (flip the meaning)
+        if (state && fromVersion === 0)
+          state.enterIsNewline = state['enterToSend'] === false;
+        return state;
+      },
     },
   ),
 );

@@ -45,6 +45,7 @@ Or fork & run on Vercel
 
 - **Cloudflare API Gateway** support
 - **Helicone for Anthropic** support
+- **Text Tools** - incl. highlight differences
 
 #### 1.4.0: Sept/Oct: scale OUT
 
@@ -59,7 +60,7 @@ Or fork & run on Vercel
 - **Camera OCR** - real-world AI - take a picture of a text, and chat with it
 - **Anthropic models** support, e.g. Claude
 - **Backup/Restore** - save chats, and restore them later
-- **[Local model support with Oobabooga server](docs/local-llm-text-web-ui.md)** - run your own LLMs!
+- **[Local model support with Oobabooga server](docs/config-local-oobabooga)** - run your own LLMs!
 - **Flatten conversations** - conversations summarizer with 4 modes
 - **Fork conversations** - create a new chat, to experiment with different endings
 - New commands: /s to add a System message, and /a for an Assistant message
@@ -152,24 +153,39 @@ Now the app should be running on `http://localhost:3000`
 
 ## Deploy with Docker 🐳
 
-Specific docker information on [docs/deploy-docker.md](docs/deploy-docker.md). In short:
+For more detailed information on deploying with Docker, please refer to the [docker deployment documentation](docs/deploy-docker.md).
 
-#### Pre-built image
+### 🔧 Locally built image
 
-Add your OpenAI API key to the `.env` file, then in a terminal run:
+> Firstly, write all your API keys and env vars to an `.env` file, and make sure the env file is using *both build and run*.
+> See [docs/environment-variables.md](docs/environment-variables.md) for a list of all environment variables.
 
 ```bash
-docker-compose up
-```
-
-#### Locally built image
-
-If you wish to build the image yourself, run
 
 ```bash
 docker build -t big-agi .
 docker run --detach 'big-agi'
 ``` 
+
+### Pre-built image
+
+> Warning: the UI will still be asking for keys, as the image was built without the API keys
+
+```bash
+docker-compose up
+```
+
+## Deploy with Cloudflare Pages ☁️
+
+Please refer to the [Cloudflare deployment documentation](docs/deploy-cloudflare.md).
+
+## Deploy with Vercel 🚀
+
+Create your GitHub fork, create a Vercel project over that fork, and deploy it. Or press the button below for convenience.
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fenricoros%2Fbig-agi&env=OPENAI_API_KEY,OPENAI_API_HOST&envDescription=OpenAI%20KEY%20for%20your%20deployment.%20Set%20HOST%20only%20if%20non-default.)
+
+
 
 <br/>
 
