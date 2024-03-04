@@ -1,37 +1,42 @@
-import { prodiaGenerateImage } from '~/modules/prodia/prodia.client';
+import { getActiveTextToImageProviderOrThrow, t2iGenerateImageOrThrow } from '~/modules/t2i/t2i.client';
 
-import { useChatStore } from '~/common/state/store-chats';
-
-import { createAssistantTypingMessage } from './editors';
+import { ConversationManager } from '~/common/chats/ConversationHandler';
+import { TextToImageProvider } from '~/common/components/useCapabilities';
 
 
 /**
- * The main 'image generation' function - for now specialized to the 'imagine' command.
+ * Text to image, appended as an 'assistant' message
  */
 export async function runImageGenerationUpdatingState(conversationId: string, imageText: string) {
+  const handler = ConversationManager.getHandler(conversationId);
+
+  // Acquire the active TextToImageProvider
+  let t2iProvider: TextToImageProvider | undefined = undefined;
+  try {
+    t2iProvider = getActiveTextToImageProviderOrThrow();
+  } catch (error: any) {
+    const assistantErrorMessageId = handler.messageAppendAssistant(`[Issue] Sorry, I can't generate images right now. ${error?.message || error?.toString() || 'Unknown error'}.`, 'issue', undefined);
+    handler.messageEdit(assistantErrorMessageId, { typing: false }, true);
+    return;
+  }
 
   // if the imageText ends with " xN" or " [N]" (where N is a number), then we'll generate N images
   const match = imageText.match(/\sx(\d+)$|\s\[(\d+)]$/);
-  const count = match ? parseInt(match[1] || match[2], 10) : 1;
-  if (count > 1)
+  const repeat = match ? parseInt(match[1] || match[2], 10) : 1;
+  if (repeat > 1)
     imageText = imageText.replace(/x(\d+)$|\[(\d+)]$/, '').trim(); // Remove the "xN" or "[N]" part from the imageText
 
-  // create a blank and 'typing' message for the assistant
-  const assistantMessageId = createAssistantTypingMessage(conversationId, 'prodia', undefined,
-    `Give me a few seconds while I draw ${imageText?.length > 20 ? 'that' : '"' + imageText + '"'}...`);
-
-  // reference the state editing functions
-  const { editMessage } = useChatStore.getState();
+  const assistantMessageId = handler.messageAppendAssistant(
+    `Give me ${t2iProvider.vendor === 'openai' ? 'a dozen' : 'a few'} seconds while I draw ${imageText?.length > 20 ? 'that' : '"' + imageText + '"'}...`,
+    '', undefined,
+  );
+  handler.messageEdit(assistantMessageId, { originLLM: t2iProvider.painter }, false);
 
   try {
-    const imageUrls = await prodiaGenerateImage(count, imageText);
-
-    // Concatenate all the resulting URLs and update the assistant message with these URLs
-    const allImageUrls = imageUrls.join('\n');
-    editMessage(conversationId, assistantMessageId, { text: allImageUrls, typing: false }, false);
-
+    const imageUrls = await t2iGenerateImageOrThrow(t2iProvider, imageText, repeat);
+    handler.messageEdit(assistantMessageId, { text: imageUrls.join('\n'), typing: false }, true);
   } catch (error: any) {
     const errorMessage = error?.message || error?.toString() || 'Unknown error';
-    editMessage(conversationId, assistantMessageId, { text: `Sorry, I couldn't create an image for you. ${errorMessage}`, typing: false }, false);
+    handler.messageEdit(assistantMessageId, { text: `[Issue] Sorry, I couldn't create an image for you. ${errorMessage}`, typing: false }, false);
   }
 }

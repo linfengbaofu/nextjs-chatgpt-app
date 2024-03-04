@@ -1,43 +1,27 @@
 import * as React from 'react';
 
-import { Box, Button, CircularProgress, IconButton, LinearProgress, Modal, ModalClose, Option, Select, Sheet, Typography } from '@mui/joy';
+import { Box, Button, IconButton, Modal, ModalClose, Option, Select, Sheet, Typography } from '@mui/joy';
+import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import DownloadIcon from '@mui/icons-material/Download';
 import InfoIcon from '@mui/icons-material/Info';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 import { InlineError } from '~/common/components/InlineError';
+import { downloadVideoFrameAsPNG, renderVideoFrameAsPNGFile } from '~/common/util/videoUtils';
 import { useCameraCapture } from '~/common/components/useCameraCapture';
 
 
-function renderVideoFrameToCanvas(videoElement: HTMLVideoElement): HTMLCanvasElement {
-  // paint the video on a canvas, to save it
-  const canvas = document.createElement('canvas');
-  canvas.width = videoElement.videoWidth || 640;
-  canvas.height = videoElement.videoHeight || 480;
-  const ctx = canvas.getContext('2d');
-  ctx?.drawImage(videoElement, 0, 0);
-  return canvas;
-}
+export function CameraCaptureModal(props: {
+  onCloseModal: () => void,
+  onAttachImage: (file: File) => void
+  // onOCR: (ocrText: string) => void }
+}) {
 
-function downloadVideoFrameAsPNG(videoElement: HTMLVideoElement) {
-  // video to canvas to png
-  const renderedFrame = renderVideoFrameToCanvas(videoElement);
-  const imageDataURL = renderedFrame.toDataURL('image/png');
-
-  // auto-download
-  const link = document.createElement('a');
-  link.download = 'image.png';
-  link.href = imageDataURL;
-  link.click();
-}
-
-
-export function CameraCaptureModal(props: { onCloseModal: () => void, onOCR: (ocrText: string) => void }) {
   // state
-  const [ocrProgress, setOCRProgress] = React.useState<number | null>(null);
   const [showInfo, setShowInfo] = React.useState(false);
+  // const [ocrProgress/*, setOCRProgress*/] = React.useState<number | null>(null);
 
-  // camera operations
+  // external state
   const {
     videoRef,
     cameras, cameraIdx, setCameraIdx,
@@ -46,12 +30,16 @@ export function CameraCaptureModal(props: { onCloseModal: () => void, onOCR: (oc
   } = useCameraCapture();
 
 
-  const stopAndClose = () => {
-    resetVideo();
-    props.onCloseModal();
-  };
+  // derived state
+  const { onCloseModal, onAttachImage } = props;
 
-  const handleVideoOCRClicked = async () => {
+
+  const stopAndClose = React.useCallback(() => {
+    resetVideo();
+    onCloseModal();
+  }, [onCloseModal, resetVideo]);
+
+  /*const handleVideoOCRClicked = async () => {
     if (!videoRef.current) return;
     const renderedFrame = renderVideoFrameToCanvas(videoRef.current);
 
@@ -68,12 +56,23 @@ export function CameraCaptureModal(props: { onCloseModal: () => void, onOCR: (oc
     setOCRProgress(null);
     stopAndClose();
     props.onOCR(result.data.text);
-  };
+  };*/
 
-  const handleVideoDownloadClicked = () => {
+  const handleVideoSnapClicked = React.useCallback(async () => {
     if (!videoRef.current) return;
-    downloadVideoFrameAsPNG(videoRef.current);
-  };
+    try {
+      const file = await renderVideoFrameAsPNGFile(videoRef.current, 'camera');
+      onAttachImage(file);
+      stopAndClose();
+    } catch (error) {
+      console.error('Error capturing video frame:', error);
+    }
+  }, [onAttachImage, stopAndClose, videoRef]);
+
+  const handleVideoDownloadClicked = React.useCallback(() => {
+    if (!videoRef.current) return;
+    downloadVideoFrameAsPNG(videoRef.current, 'camera');
+  }, [videoRef]);
 
 
   return (
@@ -111,7 +110,7 @@ export function CameraCaptureModal(props: { onCloseModal: () => void, onOCR: (oc
             ref={videoRef} autoPlay playsInline
             style={{
               display: 'block', width: '100%', maxHeight: 'calc(100vh - 200px)',
-              background: '#8888', opacity: ocrProgress !== null ? 0.5 : 1,
+              background: '#8888', //opacity: ocrProgress !== null ? 0.5 : 1,
             }}
           />
 
@@ -124,7 +123,7 @@ export function CameraCaptureModal(props: { onCloseModal: () => void, onOCR: (oc
             {info}
           </Typography>}
 
-          {ocrProgress !== null && <CircularProgress sx={{ position: 'absolute', top: 'calc(50% - 34px / 2)', left: 'calc(50% - 34px / 2)', zIndex: 2 }} />}
+          {/*{ocrProgress !== null && <CircularProgress sx={{ position: 'absolute', top: 'calc(50% - 34px / 2)', left: 'calc(50% - 34px / 2)', zIndex: 2 }} />}*/}
         </Box>
 
         {/* Bottom controls (zoom, ocr, download) & progress */}
@@ -134,16 +133,30 @@ export function CameraCaptureModal(props: { onCloseModal: () => void, onOCR: (oc
 
           {zoomControl}
 
-          {ocrProgress !== null && <LinearProgress color='primary' determinate value={100 * ocrProgress} sx={{ px: 2 }} />}
+          {/*{ocrProgress !== null && <LinearProgress color='primary' determinate value={100 * ocrProgress} sx={{ px: 2 }} />}*/}
 
           <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
-            <IconButton disabled={!info} variant='soft' color='neutral' size='lg' onClick={() => setShowInfo(info => !info)} sx={{ zIndex: 30 }}>
+            {/* Info */}
+            <IconButton size='lg' disabled={!info} variant='soft' onClick={() => setShowInfo(info => !info)} sx={{ zIndex: 30 }}>
               <InfoIcon />
             </IconButton>
-            <Button disabled={ocrProgress !== null} fullWidth variant='solid' size='lg' onClick={handleVideoOCRClicked} sx={{ flex: 1, maxWidth: 260 }}>
-              Extract Text
+            {/*<Button disabled={ocrProgress !== null} fullWidth variant='solid' size='lg' onClick={handleVideoOCRClicked} sx={{ flex: 1, maxWidth: 260 }}>*/}
+            {/*  Extract Text*/}
+            {/*</Button>*/}
+
+            {/* Capture */}
+            <Button
+              fullWidth
+              variant='solid' color='neutral'
+              onClick={handleVideoSnapClicked}
+              endDecorator={<CameraAltIcon />}
+              sx={{ flex: 1, maxWidth: 200, py: 2, borderRadius: '3rem' }}
+            >
+              Capture
             </Button>
-            <IconButton variant='soft' color='neutral' size='lg' onClick={handleVideoDownloadClicked}>
+
+            {/* Download */}
+            <IconButton size='lg' variant='soft' onClick={handleVideoDownloadClicked}>
               <DownloadIcon />
             </IconButton>
           </Box>

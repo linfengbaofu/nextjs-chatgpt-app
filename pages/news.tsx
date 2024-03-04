@@ -1,18 +1,14 @@
 import * as React from 'react';
 
 import { AppNews } from '../src/apps/news/AppNews';
-import { useMarkNewsAsSeen } from '../src/apps/news/news.hooks';
+import { markNewsAsSeen } from '../src/apps/news/news.version';
 
-import { AppLayout } from '~/common/layout/AppLayout';
+import { withLayout } from '~/common/layout/withLayout';
 
 
 export default function NewsPage() {
-  // update the last seen news version
-  useMarkNewsAsSeen();
+  // 'touch' the last seen news version
+  React.useEffect(() => markNewsAsSeen(), []);
 
-  return (
-    <AppLayout suspendAutoModelsSetup>
-      <AppNews />
-    </AppLayout>
-  );
+  return withLayout({ type: 'optima', suspendAutoModelsSetup: true }, <AppNews />);
 }

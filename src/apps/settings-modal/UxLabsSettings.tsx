@@ -1,56 +1,71 @@
 import * as React from 'react';
 
 import { FormControl, Typography } from '@mui/joy';
-import CallIcon from '@mui/icons-material/Call';
-import FormatPaintIcon from '@mui/icons-material/FormatPaint';
-import VerticalSplitIcon from '@mui/icons-material/VerticalSplit';
-import YouTubeIcon from '@mui/icons-material/YouTube';
+import AddAPhotoIcon from '@mui/icons-material/AddAPhoto';
+import ScreenshotMonitorIcon from '@mui/icons-material/ScreenshotMonitor';
+import SpeedIcon from '@mui/icons-material/Speed';
+import TitleIcon from '@mui/icons-material/Title';
 
+import { ChatBeamIcon } from '~/common/components/icons/ChatBeamIcon';
 import { FormLabelStart } from '~/common/components/forms/FormLabelStart';
 import { FormSwitchControl } from '~/common/components/forms/FormSwitchControl';
 import { Link } from '~/common/components/Link';
+import { useIsMobile } from '~/common/components/useMatchMedia';
 import { useUXLabsStore } from '~/common/state/store-ux-labs';
+
+
+// uncomment for more settings
+const DEV_MODE_SETTINGS = false;
 
 
 export function UxLabsSettings() {
 
   // external state
+  const isMobile = useIsMobile();
   const {
-    labsCalling, /*labsEnhancedUI,*/ labsMagicDraw, labsPersonaYTCreator, labsSplitBranching,
-    setLabsCalling, /*setLabsEnhancedUI,*/ setLabsMagicDraw, setLabsPersonaYTCreator, setLabsSplitBranching,
+    labsAttachScreenCapture, setLabsAttachScreenCapture,
+    labsCameraDesktop, setLabsCameraDesktop,
+    labsChatBarAlt, setLabsChatBarAlt,
+    labsChatBeam, setLabsChatBeam,
+    labsHighPerformance, setLabsHighPerformance,
   } = useUXLabsStore();
 
   return <>
 
+    {DEV_MODE_SETTINGS && <FormSwitchControl
+      title={<><ChatBeamIcon color={labsChatBeam ? 'primary' : undefined} sx={{ mr: 0.25 }} />Chat Beam</>} description={'v1.14 · ' + (labsChatBeam ? 'Active' : 'Off')}
+      checked={labsChatBeam} onChange={setLabsChatBeam}
+    />}
+
     <FormSwitchControl
-      title={<><YouTubeIcon /> YouTube Personas</>} description={labsPersonaYTCreator ? 'Creator Enabled' : 'Disabled'}
-      checked={labsPersonaYTCreator} onChange={setLabsPersonaYTCreator}
+      title={<><TitleIcon color={labsChatBarAlt ? 'primary' : undefined} sx={{ mr: 0.25 }} />Chat Title</>} description={'v1.14 · ' + (labsChatBarAlt === 'title' ? 'Show Title' : 'Show Options')}
+      checked={labsChatBarAlt === 'title'} onChange={(on) => setLabsChatBarAlt(on ? 'title' : false)}
     />
 
     <FormSwitchControl
-      title={<><FormatPaintIcon />Assisted Draw</>} description={labsMagicDraw ? 'Enabled' : 'Disabled'}
-      checked={labsMagicDraw} onChange={setLabsMagicDraw}
+      title={<><SpeedIcon color={labsHighPerformance ? 'primary' : undefined} sx={{ mr: 0.25 }} />Performance</>} description={'v1.14 · ' + (labsHighPerformance ? 'Unlocked' : 'Default')}
+      checked={labsHighPerformance} onChange={setLabsHighPerformance}
     />
 
-    <FormSwitchControl
-      title={<><CallIcon /> Voice Calls</>} description={labsCalling ? 'Call AGI' : 'Disabled'}
-      checked={labsCalling} onChange={setLabsCalling}
-    />
+    {!isMobile && <FormSwitchControl
+      title={<><ScreenshotMonitorIcon color={labsAttachScreenCapture ? 'primary' : undefined} sx={{ mr: 0.25 }} /> Screen Capture</>} description={'v1.13 · ' + (labsAttachScreenCapture ? 'Enabled' : 'Disabled')}
+      checked={labsAttachScreenCapture} onChange={setLabsAttachScreenCapture}
+    />}
 
-    <FormSwitchControl
-      title={<><VerticalSplitIcon /> Split Branching</>} description={labsSplitBranching ? 'Enabled' : 'Disabled'} disabled
-      checked={labsSplitBranching} onChange={setLabsSplitBranching}
-    />
-
-    {/*<FormSwitchControl*/}
-    {/*  title='Enhanced UI' description={labsEnhancedUI ? 'Enabled' : 'Disabled'}*/}
-    {/*  checked={labsEnhancedUI} onChange={setLabsEnhancedUI}*/}
-    {/*/>*/}
+    {!isMobile && <FormSwitchControl
+      title={<><AddAPhotoIcon color={labsCameraDesktop ? 'primary' : undefined} sx={{ mr: 0.25 }} /> Webcam</>} description={/*'v1.8 · ' +*/ (labsCameraDesktop ? 'Enabled' : 'Disabled')}
+      checked={labsCameraDesktop} onChange={setLabsCameraDesktop}
+    />}
 
     <FormControl orientation='horizontal' sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-      <FormLabelStart title='Graduated' />
+      <FormLabelStart title='Graduated' description='Ex-labs' />
       <Typography level='body-xs'>
-        <Link href='https://github.com/enricoros/big-agi/issues/192' target='_blank'>Auto Diagrams</Link> · Relative chat size · Text Tools
+        <Link href='https://github.com/enricoros/big-AGI/issues/208' target='_blank'>Split Chats</Link>
+        {' · '}<Link href='https://github.com/enricoros/big-AGI/issues/359' target='_blank'>Draw App</Link>
+        {' · '}<Link href='https://github.com/enricoros/big-AGI/issues/354' target='_blank'>Call AGI</Link>
+        {' · '}<Link href='https://github.com/enricoros/big-AGI/issues/282' target='_blank'>Persona Creator</Link>
+        {' · '}<Link href='https://github.com/enricoros/big-agi/issues/192' target='_blank'>Auto Diagrams</Link>
+        {' · '}Imagine · Relative chat size · Text Tools · LLM Overheat
       </Typography>
     </FormControl>
 

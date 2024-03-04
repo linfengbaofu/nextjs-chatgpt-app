@@ -1,7 +1,17 @@
 import * as React from 'react';
+// import { keyframes } from '@emotion/react';
 
 import { Box, Button, Divider, Modal, ModalClose, ModalDialog, ModalOverflow, Typography } from '@mui/joy';
 import { SxProps } from '@mui/joy/styles/types';
+
+// // noinspection CssUnresolvedCustomProperty
+// const cssBackgroundFadeIn = keyframes`
+//     0% {
+//         background-color: transparent
+//     }
+//     100% {
+//         background-color: var(--joy-palette-background-backdrop)
+//     }`;
 
 
 /**
@@ -9,41 +19,58 @@ import { SxProps } from '@mui/joy/styles/types';
  */
 export function GoodModal(props: {
   title?: string | React.JSX.Element,
-  strongerTitle?: boolean, noTitleBar?: boolean,
+  titleStartDecorator?: React.JSX.Element,
+  strongerTitle?: boolean,
+  noTitleBar?: boolean,
   dividers?: boolean,
   open: boolean,
   onClose?: () => void,
+  hideBottomClose?: boolean,
   startButton?: React.JSX.Element,
   sx?: SxProps,
   children: React.ReactNode,
 }) {
+  const showBottomClose = !!props.onClose && props.hideBottomClose !== true;
   return (
-    <Modal open={props.open} onClose={props.onClose}>
-      <ModalOverflow>
+    <Modal
+      open={props.open}
+      onClose={props.onClose}
+      // slotProps={{
+      //   backdrop: {
+      //     sx: {
+      //       animation: `${cssBackgroundFadeIn} 0.2s ease-in-out`,
+      //       backdropFilter: 'blur(6px)',
+      //     },
+      //   },
+      // }}
+    >
+      <ModalOverflow sx={{ p: 1 }}>
         <ModalDialog
           sx={{
             minWidth: { xs: 360, sm: 500, md: 600, lg: 700 },
             maxWidth: 700,
-            display: 'flex', flexDirection: 'column', gap: 3,
+            display: 'grid', gap: 'var(--Card-padding)',
             ...props.sx,
           }}>
 
-          {!props.noTitleBar && <Box sx={{ mb: -1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography level={props.strongerTitle !== true ? 'title-md' : 'title-lg'}>
+          {!props.noTitleBar && <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography component='h1' level={props.strongerTitle !== true ? 'title-md' : 'title-lg'} startDecorator={props.titleStartDecorator}>
               {props.title || ''}
             </Typography>
-            {!!props.onClose && <ModalClose sx={{ position: 'static', mr: -1 }} />}
+            {!!props.onClose && <ModalClose aria-label='Close Dialog' sx={{ position: 'static', my: -1, mr: -0.5 }} />}
           </Box>}
 
           {props.dividers === true && <Divider />}
 
+          {/*<Box sx={{ maxHeight: '80lvh', overflowY: 'auto', display: 'grid', gap: 'var(--Card-padding)' }}>*/}
           {props.children}
+          {/*</Box>*/}
 
           {props.dividers === true && <Divider />}
 
-          {(!!props.startButton || !!props.onClose) && <Box sx={{ mt: 'auto', display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'space-between' }}>
+          {(!!props.startButton || showBottomClose) && <Box sx={{ mt: 'auto', display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'space-between' }}>
             {props.startButton}
-            {!!props.onClose && <Button variant='solid' color='neutral' onClick={props.onClose} sx={{ ml: 'auto', minWidth: 100 }}>
+            {showBottomClose && <Button aria-label='Close Dialog' variant='solid' color='neutral' onClick={props.onClose} sx={{ ml: 'auto', minWidth: 100 }}>
               Close
             </Button>}
           </Box>}

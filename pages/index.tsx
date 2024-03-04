@@ -1,18 +1,14 @@
 import * as React from 'react';
 
 import { AppChat } from '../src/apps/chat/AppChat';
-import { useShowNewsOnUpdate } from '../src/apps/news/news.hooks';
 
-import { AppLayout } from '~/common/layout/AppLayout';
+import { withLayout } from '~/common/layout/withLayout';
 
 
-export default function ChatPage() {
-  // show the News page on updates
-  useShowNewsOnUpdate();
+export default function IndexPage() {
 
-  return (
-    <AppLayout>
-      <AppChat />
-    </AppLayout>
-  );
+  // TODO: This Index page will point to the Dashboard (or a landing page)
+  // For now it offers the chat experience, but this will change. #299
+
+  return withLayout({ type: 'optima' }, <AppChat />);
 }

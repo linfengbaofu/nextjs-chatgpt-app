@@ -4,19 +4,23 @@ import { shallow } from 'zustand/shallow';
 import { Box, List } from '@mui/joy';
 import { SxProps } from '@mui/joy/styles/types';
 
-import { DiagramConfig } from '~/modules/aifn/digrams/DiagramsModal';
-import { useChatLLM } from '~/modules/llms/store-llms';
+import type { DiagramConfig } from '~/modules/aifn/digrams/DiagramsModal';
 
-import { ShortcutKeyName, useGlobalShortcut } from '~/common/components/useGlobalShortcut';
+import type { ConversationHandler } from '~/common/chats/ConversationHandler';
 import { InlineError } from '~/common/components/InlineError';
+import { PreferencesTab, useOptimaLayout } from '~/common/layout/optima/useOptimaLayout';
+import { ShortcutKeyName, useGlobalShortcut } from '~/common/components/useGlobalShortcut';
 import { createDMessage, DConversationId, DMessage, getConversation, useChatStore } from '~/common/state/store-chats';
-import { openLayoutPreferences } from '~/common/layout/store-applayout';
-import { useCapabilityElevenLabs, useCapabilityProdia } from '~/common/components/useCapabilities';
+import { useBrowserTranslationWarning } from '~/common/components/useIsBrowserTranslating';
+import { useCapabilityElevenLabs } from '~/common/components/useCapabilities';
+import { useEphemerals } from '~/common/chats/EphemeralsStore';
 
-import { ChatMessageMemo } from './message/ChatMessage';
+import { ChatMessage, ChatMessageMemo } from './message/ChatMessage';
 import { CleanerMessage, MessagesSelectionHeader } from './message/CleanerMessage';
+import { Ephemerals } from './Ephemerals';
 import { PersonaSelector } from './persona-selector/PersonaSelector';
 import { useChatShowSystemMessages } from '../store-app-chat';
+import { useScrollToBottom } from './scroll-to-bottom/useScrollToBottom';
 
 
 /**
@@ -24,12 +28,17 @@ import { useChatShowSystemMessages } from '../store-app-chat';
  */
 export function ChatMessageList(props: {
   conversationId: DConversationId | null,
-  isMessageSelectionMode: boolean, setIsMessageSelectionMode: (isMessageSelectionMode: boolean) => void,
+  conversationHandler: ConversationHandler | null,
+  capabilityHasT2I: boolean,
+  chatLLMContextTokens: number | null,
+  fitScreen: boolean,
+  isMessageSelectionMode: boolean,
   onConversationBranch: (conversationId: DConversationId, messageId: string) => void,
-  onConversationExecuteHistory: (conversationId: DConversationId, history: DMessage[]) => void,
-  onTextDiagram: (diagramConfig: DiagramConfig | null) => Promise<any>,
-  onTextImagine: (conversationId: DConversationId, selectedText: string) => Promise<any>,
-  onTextSpeak: (selectedText: string) => Promise<any>,
+  onConversationExecuteHistory: (conversationId: DConversationId, history: DMessage[], chatEffectBeam: boolean) => Promise<void>,
+  onTextDiagram: (diagramConfig: DiagramConfig | null) => void,
+  onTextImagine: (conversationId: DConversationId, selectedText: string) => Promise<void>,
+  onTextSpeak: (selectedText: string) => Promise<void>,
+  setIsMessageSelectionMode: (isMessageSelectionMode: boolean) => void,
   sx?: SxProps,
 }) {
 
@@ -39,7 +48,10 @@ export function ChatMessageList(props: {
   const [selectedMessages, setSelectedMessages] = React.useState<Set<string>>(new Set());
 
   // external state
+  const { notifyBooting } = useScrollToBottom();
+  const { openPreferencesTab } = useOptimaLayout();
   const [showSystemMessages] = useChatShowSystemMessages();
+  const optionalTranslationWarning = useBrowserTranslationWarning();
   const { conversationMessages, historyTokenCount, editMessage, deleteMessage, setMessages } = useChatStore(state => {
     const conversation = state.conversations.find(conversation => conversation.id === props.conversationId);
     return {
@@ -50,18 +62,18 @@ export function ChatMessageList(props: {
       setMessages: state.setMessages,
     };
   }, shallow);
-  const { chatLLM } = useChatLLM();
-  const { mayWork: isImaginable } = useCapabilityProdia();
+  const ephemerals = useEphemerals(props.conversationHandler);
   const { mayWork: isSpeakable } = useCapabilityElevenLabs();
 
   // derived state
-  const { conversationId, onConversationBranch, onConversationExecuteHistory, onTextDiagram, onTextImagine, onTextSpeak } = props;
+  const { conversationId, capabilityHasT2I, onConversationBranch, onConversationExecuteHistory, onTextDiagram, onTextImagine, onTextSpeak } = props;
 
 
   // text actions
 
-  const handleRunExample = (text: string) =>
-    conversationId && onConversationExecuteHistory(conversationId, [...conversationMessages, createDMessage('user', text)]);
+  const handleRunExample = React.useCallback(async (text: string) => {
+    conversationId && await onConversationExecuteHistory(conversationId, [...conversationMessages, createDMessage('user', text)], false);
+  }, [conversationId, conversationMessages, onConversationExecuteHistory]);
 
 
   // message menu methods proxy
@@ -70,11 +82,11 @@ export function ChatMessageList(props: {
     conversationId && onConversationBranch(conversationId, messageId);
   }, [conversationId, onConversationBranch]);
 
-  const handleConversationRestartFrom = React.useCallback((messageId: string, offset: number) => {
+  const handleConversationRestartFrom = React.useCallback(async (messageId: string, offset: number, chatEffectBeam: boolean) => {
     const messages = getConversation(conversationId)?.messages;
     if (messages) {
       const truncatedHistory = messages.slice(0, messages.findIndex(m => m.id === messageId) + offset + 1);
-      conversationId && onConversationExecuteHistory(conversationId, truncatedHistory);
+      conversationId && await onConversationExecuteHistory(conversationId, truncatedHistory, chatEffectBeam);
     }
   }, [conversationId, onConversationExecuteHistory]);
 
@@ -95,26 +107,26 @@ export function ChatMessageList(props: {
   }, [conversationId, editMessage]);
 
   const handleTextDiagram = React.useCallback(async (messageId: string, text: string) => {
-    conversationId && await onTextDiagram({ conversationId: conversationId, messageId, text });
+    conversationId && onTextDiagram({ conversationId: conversationId, messageId, text });
   }, [conversationId, onTextDiagram]);
 
   const handleTextImagine = React.useCallback(async (text: string) => {
-    if (!isImaginable)
-      return openLayoutPreferences(2);
+    if (!capabilityHasT2I)
+      return openPreferencesTab(PreferencesTab.Draw);
     if (conversationId) {
       setIsImagining(true);
       await onTextImagine(conversationId, text);
       setIsImagining(false);
     }
-  }, [conversationId, isImaginable, onTextImagine]);
+  }, [capabilityHasT2I, conversationId, onTextImagine, openPreferencesTab]);
 
   const handleTextSpeak = React.useCallback(async (text: string) => {
     if (!isSpeakable)
-      return openLayoutPreferences(3);
+      return openPreferencesTab(PreferencesTab.Voice);
     setIsSpeaking(true);
     await onTextSpeak(text);
     setIsSpeaking(false);
-  }, [isSpeakable, onTextSpeak]);
+  }, [isSpeakable, onTextSpeak, openPreferencesTab]);
 
 
   // operate on the local selection set
@@ -145,24 +157,32 @@ export function ChatMessageList(props: {
   });
 
 
-  // text-diff functionality, find the messages to diff with
+  // text-diff functionality: only diff the last message and when it's complete (not typing), and they're similar in size
 
-  const { diffMessage, diffText } = React.useMemo(() => {
+  const { diffTargetMessage, diffPrevText } = React.useMemo(() => {
     const [msgB, msgA] = conversationMessages.filter(m => m.role === 'assistant').reverse();
     if (msgB?.text && msgA?.text && !msgB?.typing) {
       const textA = msgA.text, textB = msgB.text;
       const lenA = textA.length, lenB = textB.length;
       if (lenA > 80 && lenB > 80 && lenA > lenB / 3 && lenB > lenA / 3)
-        return { diffMessage: msgB, diffText: textA };
+        return { diffTargetMessage: msgB, diffPrevText: textA };
     }
-    return { diffMessage: undefined, diffText: undefined };
+    return { diffTargetMessage: undefined, diffPrevText: undefined };
   }, [conversationMessages]);
+
+
+  // scroll to the very bottom of a new chat
+  React.useEffect(() => {
+    if (conversationId)
+      notifyBooting();
+  }, [conversationId, notifyBooting]);
+
 
   // no content: show the persona selector
 
   const filteredMessages = conversationMessages
-    .filter(m => m.role !== 'system' || showSystemMessages) // hide the System message if the user choses to
-    .reverse(); // 'reverse' is because flexDirection: 'column-reverse' to auto-snap-to-bottom
+    .filter(m => m.role !== 'system' || showSystemMessages); // hide the System message if the user choses to
+
 
   if (!filteredMessages.length)
     return (
@@ -177,51 +197,71 @@ export function ChatMessageList(props: {
     <List sx={{
       p: 0, ...(props.sx || {}),
       // this makes sure that the the window is scrolled to the bottom (column-reverse)
-      display: 'flex', flexDirection: 'column-reverse',
+      display: 'flex',
+      flexDirection: 'column',
       // fix for the double-border on the last message (one by the composer, one to the bottom of the message)
       // marginBottom: '-1px',
     }}>
 
-      {filteredMessages.map((message, idx) =>
-        props.isMessageSelectionMode ? (
+      {optionalTranslationWarning}
 
-          <CleanerMessage
-            key={'sel-' + message.id}
-            message={message}
-            isBottom={idx === 0} remainingTokens={(chatLLM ? chatLLM.contextTokens : 0) - historyTokenCount}
-            selected={selectedMessages.has(message.id)} onToggleSelected={handleSelectMessage}
-          />
-
-        ) : (
-
-          <ChatMessageMemo
-            key={'msg-' + message.id}
-            message={message}
-            diffPreviousText={message === diffMessage ? diffText : undefined}
-            isBottom={idx === 0}
-            isImagining={isImagining} isSpeaking={isSpeaking}
-            onConversationBranch={handleConversationBranch}
-            onConversationRestartFrom={handleConversationRestartFrom}
-            onConversationTruncate={handleConversationTruncate}
-            onMessageDelete={handleMessageDelete}
-            onMessageEdit={handleMessageEdit}
-            onTextDiagram={handleTextDiagram}
-            onTextImagine={handleTextImagine}
-            onTextSpeak={handleTextSpeak}
-          />
-
-        ),
-      )}
-
-      {/* Header at the bottom because of 'row-reverse' */}
       {props.isMessageSelectionMode && (
         <MessagesSelectionHeader
           hasSelected={selectedMessages.size > 0}
-          isBottom={filteredMessages.length === 0}
           sumTokens={historyTokenCount}
           onClose={() => props.setIsMessageSelectionMode(false)}
           onSelectAll={handleSelectAll}
           onDeleteMessages={handleSelectionDelete}
+        />
+      )}
+
+      {filteredMessages.map((message, idx, { length: count }) => {
+
+          // Optimization: if the component is going to change (e.g. the message is typing), we don't want to memoize it to not throw garbage in memory
+          const ChatMessageMemoOrNot = message.typing ? ChatMessage : ChatMessageMemo;
+
+          return props.isMessageSelectionMode ? (
+
+            <CleanerMessage
+              key={'sel-' + message.id}
+              message={message}
+              remainingTokens={props.chatLLMContextTokens ? (props.chatLLMContextTokens - historyTokenCount) : undefined}
+              selected={selectedMessages.has(message.id)} onToggleSelected={handleSelectMessage}
+            />
+
+          ) : (
+
+            <ChatMessageMemoOrNot
+              key={'msg-' + message.id}
+              message={message}
+              diffPreviousText={message === diffTargetMessage ? diffPrevText : undefined}
+              fitScreen={props.fitScreen}
+              isBottom={idx === count - 1}
+              isImagining={isImagining}
+              isSpeaking={isSpeaking}
+              onConversationBranch={handleConversationBranch}
+              onConversationRestartFrom={handleConversationRestartFrom}
+              onConversationTruncate={handleConversationTruncate}
+              onMessageDelete={handleMessageDelete}
+              onMessageEdit={handleMessageEdit}
+              onTextDiagram={handleTextDiagram}
+              onTextImagine={handleTextImagine}
+              onTextSpeak={handleTextSpeak}
+            />
+
+          );
+        },
+      )}
+
+      {!!ephemerals.length && (
+        <Ephemerals
+          ephemerals={ephemerals}
+          conversationId={props.conversationId}
+          sx={{
+            mt: 'auto',
+            overflowY: 'auto',
+            minHeight: 64,
+          }}
         />
       )}
 

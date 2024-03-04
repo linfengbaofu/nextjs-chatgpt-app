@@ -6,26 +6,26 @@ import { persist } from 'zustand/middleware';
 
 /**
  * Graduated:
- *  - Persona YT Creator: still under a 'true' flag, to disable it if needed
+ *  - see `UxLabsSettings.tsx`, and also:
  *  - Text Tools: dinamically shown where applicable
- *  - Chat Mode: follow-ups; moved to Chat Advanced UI, itemized (Auto-title, Auto-diagram)
+ *  - Chat Mode: follow-ups; moved to Chat Advanced UI
  */
 interface UXLabsStore {
 
-  labsCalling: boolean;
-  setLabsCalling: (labsCalling: boolean) => void;
+  labsAttachScreenCapture: boolean;
+  setLabsAttachScreenCapture: (labsAttachScreenCapture: boolean) => void;
 
-  labsEnhancedUI: boolean;
-  setLabsEnhancedUI: (labsEnhancedUI: boolean) => void;
+  labsCameraDesktop: boolean;
+  setLabsCameraDesktop: (labsCameraDesktop: boolean) => void;
 
-  labsMagicDraw: boolean;
-  setLabsMagicDraw: (labsMagicDraw: boolean) => void;
+  labsChatBarAlt: false | 'title',
+  setLabsChatBarAlt: (labsChatBarAlt: false | 'title') => void;
 
-  labsPersonaYTCreator: boolean;
-  setLabsPersonaYTCreator: (labsPersonaYTCreator: boolean) => void;
+  labsChatBeam: boolean;
+  setLabsChatBeam: (labsChatBeam: boolean) => void;
 
-  labsSplitBranching: boolean;
-  setLabsSplitBranching: (labsSplitBranching: boolean) => void;
+  labsHighPerformance: boolean;
+  setLabsHighPerformance: (labsHighPerformance: boolean) => void;
 
 }
 
@@ -33,20 +33,20 @@ export const useUXLabsStore = create<UXLabsStore>()(
   persist(
     (set) => ({
 
-      labsCalling: false,
-      setLabsCalling: (labsCalling: boolean) => set({ labsCalling }),
+      labsAttachScreenCapture: false,
+      setLabsAttachScreenCapture: (labsAttachScreenCapture: boolean) => set({ labsAttachScreenCapture }),
 
-      labsEnhancedUI: false,
-      setLabsEnhancedUI: (labsEnhancedUI: boolean) => set({ labsEnhancedUI }),
+      labsCameraDesktop: false,
+      setLabsCameraDesktop: (labsCameraDesktop: boolean) => set({ labsCameraDesktop }),
 
-      labsMagicDraw: false,
-      setLabsMagicDraw: (labsMagicDraw: boolean) => set({ labsMagicDraw }),
+      labsChatBarAlt: false,
+      setLabsChatBarAlt: (labsChatBarAlt: false | 'title') => set({ labsChatBarAlt }),
 
-      labsPersonaYTCreator: true, // NOTE: default to true, as it is a graduated experiment
-      setLabsPersonaYTCreator: (labsPersonaYTCreator: boolean) => set({ labsPersonaYTCreator }),
+      labsChatBeam: false,
+      setLabsChatBeam: (labsChatBeam: boolean) => set({ labsChatBeam }),
 
-      labsSplitBranching: false,
-      setLabsSplitBranching: (labsSplitBranching: boolean) => set({ labsSplitBranching }),
+      labsHighPerformance: false,
+      setLabsHighPerformance: (labsHighPerformance: boolean) => set({ labsHighPerformance }),
 
     }),
     {
@@ -54,3 +54,11 @@ export const useUXLabsStore = create<UXLabsStore>()(
     },
   ),
 );
+
+export function getUXLabsChatBeam() {
+  return useUXLabsStore.getState().labsChatBeam;
+}
+
+export function getUXLabsHighPerformance() {
+  return useUXLabsStore.getState().labsHighPerformance;
+}
