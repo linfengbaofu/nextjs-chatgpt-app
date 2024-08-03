@@ -1,40 +1,26 @@
 import * as React from 'react';
-import { keyframes } from '@emotion/react';
 import NextImage from 'next/image';
 import TimeAgo from 'react-timeago';
 
-import { AspectRatio, Box, Button, Card, CardContent, CardOverflow, Container, Grid, IconButton, Typography } from '@mui/joy';
+import { AspectRatio, Box, Button, Card, CardContent, CardOverflow, Container, Grid, Typography } from '@mui/joy';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LaunchIcon from '@mui/icons-material/Launch';
 
 import { Brand } from '~/common/app.config';
 import { Link } from '~/common/components/Link';
 import { ROUTE_INDEX } from '~/common/app.routes';
+import { animationColorBlues, animationColorRainbow } from '~/common/util/animUtils';
 import { capitalizeFirstLetter } from '~/common/util/textUtils';
-import { cssRainbowColorKeyframes } from '~/common/app.theme';
 
 import { NewsItems } from './news.data';
+import { beamNewsCallout } from './beam.data';
 
 
 // number of news items to show by default, before the expander
-const DEFAULT_NEWS_COUNT = 3;
-
-export const cssColorKeyframes = keyframes`
-    0%, 100% {
-        color: #636B74; /* Neutral main color (500) */
-    }
-    25% {
-        color: #12467B; /* Primary darker shade (700) */
-    }
-    50% {
-        color: #0B6BCB; /* Primary main color (500) */
-    }
-    75% {
-        color: #083e75; /* Primary lighter shade (300) */
-    }`;
+const NEWS_INITIAL_COUNT = 3;
+const NEWS_LOAD_STEP = 2;
 
 
-// callout, for special occasions
 export const newsRoadmapCallout =
   <Card variant='solid' invertedColors>
     <CardContent sx={{ gap: 2 }}>
@@ -69,11 +55,14 @@ export const newsRoadmapCallout =
 
 export function AppNews() {
   // state
-  const [lastNewsIdx, setLastNewsIdx] = React.useState<number>(DEFAULT_NEWS_COUNT - 1);
+  const [lastNewsIdx, setLastNewsIdx] = React.useState<number>(NEWS_INITIAL_COUNT - 1);
 
   // news selection
   const news = NewsItems.filter((_, idx) => idx <= lastNewsIdx);
   const firstNews = news[0] ?? null;
+
+  // show expander
+  const canExpand = news.length < NewsItems.length;
 
   return (
 
@@ -90,7 +79,7 @@ export function AppNews() {
       }}>
 
         <Typography level='h1' sx={{ fontSize: '2.9rem', mb: 4 }}>
-          Welcome to {Brand.Title.Base} <Box component='span' sx={{ animation: `${cssColorKeyframes} 10s infinite`, zIndex: 1 }}>{firstNews?.versionCode}</Box>!
+          Welcome to {Brand.Title.Base} <Box component='span' sx={{ animation: `${animationColorBlues} 10s infinite`, zIndex: 1 /* perf-opt */ }}>{firstNews?.versionCode}</Box>!
         </Typography>
 
         <Typography sx={{ mb: 2 }} level='title-sm'>
@@ -118,10 +107,15 @@ export function AppNews() {
         <Container disableGutters maxWidth='sm'>
           {news?.map((ni, idx) => {
             // const firstCard = idx === 0;
-            const hasCardAfter = news.length < NewsItems.length;
-            const showExpander = hasCardAfter && (idx === news.length - 1);
             const addPadding = false; //!firstCard; // || showExpander;
             return <React.Fragment key={idx}>
+
+              {/* Inject the Beam item here*/}
+              {idx === 2 && (
+                <Box sx={{ mb: 3 }}>
+                  {beamNewsCallout}
+                </Box>
+              )}
 
               {/* News Item */}
               <Card key={'news-' + idx} sx={{ mb: 3, minHeight: 32, gap: 1 }}>
@@ -132,9 +126,9 @@ export function AppNews() {
                       <Box
                         component='span'
                         sx={idx ? {} : {
-                          animation: `${cssRainbowColorKeyframes} 5s infinite`,
+                          animation: `${animationColorRainbow} 5s infinite`,
                           fontWeight: 'lg',
-                          zIndex: 1,
+                          zIndex: 1, /* perf-opt */
                         }}
                       >
                         {ni.versionName}
@@ -148,7 +142,7 @@ export function AppNews() {
                   {!!ni.items && (ni.items.length > 0) && (
                     <ul style={{ marginTop: 8, marginBottom: 8, paddingInlineStart: '1.5rem', listStyleType: '"-  "' }}>
                       {ni.items.filter(item => item.dev !== true).map((item, idx) => (
-                        <li key={idx} style={{ listStyle: item.icon ? '" "' : '"-  "', marginLeft: item.icon ? '-1.125rem' : undefined }}>
+                        <li key={idx} style={{ listStyle: (item.icon || item.noBullet) ? '" "' : '"-  "', marginLeft: item.icon ? '-1.125rem' : undefined }}>
                           <Typography component='div' sx={{ fontSize: 'sm' }}>
                             {item.icon && <item.icon sx={{ fontSize: 'xs', mr: 0.75 }} />}
                             {item.text}
@@ -158,19 +152,6 @@ export function AppNews() {
                     </ul>
                   )}
 
-                  {showExpander && (
-                    <IconButton
-                      variant='solid'
-                      onClick={() => setLastNewsIdx(idx + 1)}
-                      sx={{
-                        position: 'absolute', right: 0, bottom: 0, mr: -1, mb: -1,
-                        // backgroundColor: 'background.surface',
-                        borderRadius: '50%',
-                      }}
-                    >
-                      <ExpandMoreIcon />
-                    </IconButton>
-                  )}
                 </CardContent>
 
                 {!!ni.versionCoverImage && (
@@ -184,14 +165,16 @@ export function AppNews() {
                         // commented: we scale the images to 600px wide (>300 px tall)
                         // sizes='(max-width: 1200px) 100vw, 50vw'
                         priority={idx === 0}
+                        quality={90}
                       />
                     </AspectRatio>
                   </CardOverflow>
                 )}
+
               </Card>
 
               {/* Inject the roadmap item here*/}
-              {idx === 0 && (
+              {idx === 3 && (
                 <Box sx={{ mb: 3 }}>
                   {newsRoadmapCallout}
                 </Box>
@@ -199,6 +182,19 @@ export function AppNews() {
 
             </React.Fragment>;
           })}
+
+          {canExpand && (
+            <Button
+              fullWidth
+              variant='soft'
+              color='neutral'
+              onClick={() => setLastNewsIdx(index => index + NEWS_LOAD_STEP)}
+              endDecorator={<ExpandMoreIcon />}
+            >
+              Previous News
+            </Button>
+          )}
+
         </Container>
 
         {/*<Typography sx={{ textAlign: 'center' }}>*/}
