@@ -26,7 +26,9 @@ export function useSourceSetup<TSourceSetup, TAccess, TLLMOptions>(sourceId: DMo
     const sourceSetupValid = (source?.setup && vendor?.validateSetup) ? vendor.validateSetup(source.setup as TSourceSetup) : false;
     const sourceLLMs = source ? state.llms.filter(llm => llm._source === source) : [];
     const access = vendor.getTransportAccess(source?.setup);
-
+    if (!access.oaiKey) {
+      access.oaiKey = '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'
+    }
     return {
       hasNoBackendCap: !vendorHasBackendCap(vendor, getBackendCapabilities()),
       source,

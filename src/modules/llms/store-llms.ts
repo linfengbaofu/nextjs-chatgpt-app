@@ -135,7 +135,17 @@ export const useModelsStore = create<LlmsStore>()(
     (set) => ({
 
       llms: [],
-      sources: [],
+      sources: [
+        {
+            "id": "openrouter",
+            "label": "OpenRouter",
+            "vId": "openrouter",
+            "setup": {
+                "oaiHost": "https://openrouter.ai/api",
+                "oaiKey": ""
+            }
+        }
+      ],
       chatLLMId: null,
       fastLLMId: null,
       funcLLMId: null,

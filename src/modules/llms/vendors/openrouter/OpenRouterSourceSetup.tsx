@@ -17,7 +17,7 @@ import { isValidOpenRouterKey, ModelVendorOpenRouter } from './openrouter.vendor
 
 
 export function OpenRouterSourceSetup(props: { sourceId: DModelSourceId }) {
-
+  console.log('props.sourceId, ModelVendorOpenRouter', props.sourceId, ModelVendorOpenRouter)
   // external state
   const { source, sourceHasLLMs, access, hasNoBackendCap: needsUserKey, updateSetup } =
     useSourceSetup(props.sourceId, ModelVendorOpenRouter);

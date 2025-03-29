@@ -63,7 +63,7 @@ export function ModelsModal(props: { suspendAutoModelsSetup?: boolean }) {
     if (autoAddTrigger && !sources.length)
       addSource(createModelSourceForDefaultVendor(sources));
   }, [autoAddTrigger]);
-
+// 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
 
   return <>
 

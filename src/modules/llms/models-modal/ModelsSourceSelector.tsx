@@ -57,6 +57,7 @@ export function ModelsSourceSelector(props: {
     closeVendorsMenu();
     const { sources: modelSources } = useModelsStore.getState();
     const modelSource = createModelSourceForVendor(vendorId, modelSources);
+    console.log('modelSource', modelSource)
     if (modelSource) {
       addModelSource(modelSource);
       props.setSelectedSourceId(modelSource.id);

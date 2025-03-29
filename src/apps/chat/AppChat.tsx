@@ -43,6 +43,8 @@ import { Composer } from './components/composer/Composer';
 import { usePanesManager } from './components/panes/usePanesManager';
 
 import { _handleExecute } from './editors/_handleExecute';
+import { ModelVendorOpenRouter } from '~/modules/llms/vendors/openrouter/openrouter.vendor';
+import { useSourceSetup } from '~/modules/llms/vendors/useSourceSetup';
 
 
 // what to say when a chat is new and has no title
@@ -79,6 +81,7 @@ const composerClosedSx: SxProps = {
 
 
 export function AppChat() {
+
 
   // state
   const [isComposerMulticast, setIsComposerMulticast] = React.useState(false);
@@ -633,3 +636,5 @@ export function AppChat() {
 
   </>;
 }
+
+

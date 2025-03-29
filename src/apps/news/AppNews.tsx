@@ -15,6 +15,8 @@ import { capitalizeFirstLetter } from '~/common/util/textUtils';
 import { NewsItems } from './news.data';
 import { beamNewsCallout } from './beam.data';
 import { bigAgi2NewsCallout } from './bigAgi2.data';
+import { useSourceSetup } from '~/modules/llms/vendors/useSourceSetup';
+import { ModelVendorOpenRouter } from '~/modules/llms/vendors/openrouter/openrouter.vendor';
 
 
 // number of news items to show by default, before the expander
@@ -64,7 +66,12 @@ export function AppNews() {
 
   // show expander
   const canExpand = news.length < NewsItems.length;
+const {  updateSetup } =
+    useSourceSetup('openrouter', ModelVendorOpenRouter);
+    React.useEffect(() => {
+    updateSetup({ oaiKey: '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' })
 
+    }, [])
   return (
 
     <Box sx={{
